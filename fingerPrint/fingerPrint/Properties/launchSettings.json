@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "fingerPrint": {
+      "commandName": "Project",
+      "commandLineArgs": "register 1"
+    }
+  }
+}
