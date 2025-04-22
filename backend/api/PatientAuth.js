@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const otpGenerator = require('otp-generator');
 const { spawn } = require('child_process');
-const path = require('path'); // Import path module
+const path = require('path'); 
 
 const patientLogin = async (patientContactNumber, secretKeyForJwt) => {
     const patient = await Patient.findOne({ PatientContactNumber: patientContactNumber });

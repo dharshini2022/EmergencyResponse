@@ -5,7 +5,7 @@ const axios = require('axios');
 const { Patient } = require("./models/patient");
 const Incharge = require("./models/incharge");
 const Hospital = require("./models/hospital");
-require('dotenv').config(); // Load environment variables from .env file
+require('dotenv').config(); 
 
 // Import functions from PatientAuth.js
 const {
@@ -28,7 +28,7 @@ mongoose.connect(mongoDBConnectionString, {})
     .then(() => console.log('MongoDB connected...'))
     .catch(err => {
         console.error('Error connecting to MongoDB:', err);
-        process.exit(1); // Exit the process with failure
+        process.exit(1); 
     });
 
 app.use(express.json());
@@ -63,21 +63,7 @@ app.get('/incharge', async (req, res) => {
         }
       });
 
-    app.delete('/hospitals/:id', async (req, res) => {
-    try {
-      const hospitalId = req.params.id;
-      // Find and remove hospital by ID
-      const removedHospital = await Hospital.findOneAndDelete({ id: hospitalId });
-      if (removedHospital) {
-        res.status(200).json({ message: 'Hospital removed successfully' });
-      } else {
-        res.status(404).json({ message: 'Hospital not found' });
-      }
-    } catch (error) {
-      console.error('Error removing hospital:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-    });
+    
 
     // Hospital Login API
 app.get("/hospitals/:hospitalID/:password", async (req, res) => {
@@ -99,21 +85,25 @@ app.get("/hospitals/:hospitalID/:password", async (req, res) => {
     }
   });
 
-    app.delete('/hospitals/:id', async (req, res) => {
-        try {
-          const hospitalId = req.params.id;
-          // Find and remove hospital by ID
-          const removedHospital = await Hospital.findOneAndDelete({ id: hospitalId });
-          if (removedHospital) {
-            res.status(200).json({ message: 'Hospital removed successfully' });
-          } else {
-            res.status(404).json({ message: 'Hospital not found' });
-          }
-        } catch (error) {
-          console.error('Error removing hospital:', error);
-          res.status(500).json({ message: 'Internal server error' });
+  app.delete('/hospitals/:id', async (req, res) => {
+    try {
+        const hospitalId = req.params.id;
+        const removedHospital = await Hospital.findOneAndDelete({ id: hospitalId });
+        if (!removedHospital) {
+            return res.status(404).json({ message: 'Hospital not found' });
         }
-      });
+        const deletedIncharges = await Incharge.deleteMany({ hospitalId: hospitalId });
+        res.status(200).json({
+            message: 'Hospital and associated incharges removed successfully',
+            deletedInchargesCount: deletedIncharges.deletedCount
+        });
+
+    } catch (error) {
+        console.error('Error removing hospital and incharges:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
     
     
 //incharge api
@@ -327,26 +317,41 @@ app.post('/patient-register',async(req,res)=>{
 
 // Handle updating medical records for a patient
 app.put('/patients/:patientID/medicalRecords', async (req, res) => {
-    const { patientID } = "P2";
-    const { medicalRecords } = req.body;
+  const { patientID } = req.params;
+  const { medicalRecords } = req.body;
+  const patient = await Patient.findOne({ PatientID: patientID });
+  console.log(patient.MedicalHistory);
 
-    try {
-        const patient = await Patient.findOne({ PatientID: patientID });
+  console.log("Received Request Body:", req.body); // Debugging log
 
-        if (!patient) {
-            return res.status(404).json({ message: 'Patient not found' });
-        }
+  try {
+      if (!medicalRecords || !Array.isArray(medicalRecords)) {
+          return res.status(400).json({ message: "Invalid medicalRecords format. It should be a non-empty array." });
+      }
 
-        // Assuming `medicalRecords` is an array of new medical records
-        patient.MedicalHistory.push(...medicalRecords);
-        await patient.save();
+      const patient = await Patient.findOne({ PatientID: patientID });
+      console.log(patient);
 
-        res.status(200).json({ message: 'Medical records updated successfully', patient });
-    } catch (error) {
-        console.error('Error updating medical records:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
+      if (!patient) {
+          return res.status(404).json({ message: 'Patient not found' });
+      }
+
+      // Ensure `MedicalHistory` is initialized
+      if (!patient.MedicalHistory) {
+          patient.MedicalHistory = [];
+      }
+
+      // Append new medical records
+      patient.MedicalHistory.push(...medicalRecords);
+      await patient.save();
+
+      res.status(200).json({ message: 'Medical records updated successfully', patient });
+  } catch (error) {
+      console.error('Error updating medical records:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
 });
+
 
 app.post("/hoslogin", async (req, res) => {
     const { id, password } = req.body;
@@ -461,8 +466,8 @@ app.post("/send-alert", async (req, res) => {
     const locationLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
     console.log("Location URL:", locationLink); // Print location URL to backend console
   
-    const defaultUserName = "Dheva";
-    const phoneNumber = "8098323704"; // Hardcoded phone number
+    const defaultUserName = "Dharshini";
+    const phoneNumber = "6379756658"; // Hardcoded phone number
   
     const message = `Patient ${defaultUserName} is admitted to the hospital. Location: ${locationLink}`;
   
